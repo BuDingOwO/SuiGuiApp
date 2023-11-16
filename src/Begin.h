@@ -3,8 +3,7 @@
 #define SUIGUIAPP_BEGIN_H
 
 void BeginFrame();
-void Init();
-
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 
 

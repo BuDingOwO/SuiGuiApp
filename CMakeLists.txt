@@ -41,7 +41,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         -static-libgcc
         -static-libstdc++
         libwinpthread.a
+        -lpthread
+        -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
 )
+# https://blog.csdn.net/soralaro/article/details/88708353
 
 #if (WIN32)
 #    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

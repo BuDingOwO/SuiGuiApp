@@ -9,6 +9,7 @@
 #include <GLES2/gl2.h>
 #endif
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include "Begin.h"
 
 #define PI 3.141592
@@ -41,9 +42,11 @@ int main( int argc, char** argv )
     // 隐藏标题栏和边框
 //    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
-    GLFWwindow * window = glfwCreateWindow(1280, 720, "SuiApp", NULL, NULL);
+    GLFWwindow * window = glfwCreateWindow(1280+20, 720+20, "SuiApp", NULL, NULL);
     if ( window == NULL )
         return 1;
+
+    glfwSetKeyCallback(window, key_callback);
     glfwMakeContextCurrent( window );
     glfwSwapInterval(1); // Enable vsync
 
@@ -54,14 +57,16 @@ int main( int argc, char** argv )
     ImGui_ImplGlfw_InitForOpenGL( window, true );
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    void Init();
-
     while ( !glfwWindowShouldClose( window ) )
     {
+
+
         glfwPollEvents();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+
+
 
         ImGui::NewFrame();
 
