@@ -7,7 +7,11 @@
 #include <thread>
 #include <chrono>
 
+std::vector<ImVec2> EnemyPreviousPosList;
+
 class Animation {
+private:
+
 public:
     class NoAnimation {
     public:
@@ -28,54 +32,40 @@ public:
         }
     };
 
-    class [[maybe_unused]] MovingAnimation {
+    class MovingAnimation {
+    private:
+        ImVec2 CurrentPos;
+
     public:
-        float startX, startY;  // 起始位置
-        float endX, endY;      // 终点位置
-        float duration;        // 动画持续时间
-        float currentTime;     // 当前动画时间
-        char* FilePath;        // 图片文件路径
-        int iOffset;          // 图片缩放偏移
+//        Animation& animation; // 引用外部类的实例
+//        explicit MovingAnimation(Animation& anim) : animation(anim) {}
+        float dt = 1.f / 5.0f;
+        ImVec2 EmptyVec;
+        void Update(ImVec2 Pos, ImVec2 Vel,int index , const char* Image, int iScaleOffset = 0) {
+            if (EnemyPreviousPosList.size() <= index){
+                for (short i; i <= index + 1; i++)
+                EnemyPreviousPosList.push_back(EmptyVec);
+            }
+            if (EnemyPreviousPosList[index].x == 0 && EnemyPreviousPosList[index].y == 0){
+                CurrentPos = Pos;
+                CurrentPos.x = Pos.x + Vel.x * dt;
+                CurrentPos.y = Pos.y + Vel.y * dt;
+            }else{
+                CurrentPos.x = EnemyPreviousPosList[index].x + Vel.x * dt;
+                CurrentPos.y = EnemyPreviousPosList[index].y + Vel.y * dt;
+            }
+            EnemyPreviousPosList[index] = CurrentPos;
+            GraphicsSystem::DrawImage(CurrentPos.x, CurrentPos.y, Image, iScaleOffset);
+        }
 
-        void Update(float deltaTime) {
-            currentTime += deltaTime;
-
-            // 计算插值因子（通常是一个介于 0 到 1 之间的值）
-            float t = currentTime / duration;
-            t = (t > 1.0f) ? 1.0f : t;  // 确保 t 不会超过 1
-
-            // 使用缓动函数（比如线性插值）计算当前位置
-            float interpolatedX = Lerp(startX, endX, t);
-            float interpolatedY = Lerp(startY, endY, t);
-
-            // 更新物体的位置
-            UpdateObjectPosition(interpolatedX, interpolatedY, FilePath, iOffset);
-
-            // 判断动画是否完成
-            if (currentTime >= duration) {
-                // 动画完成后的处理
-                HandleAnimationComplete();
+        void DefEntityList(int Counter){
+            if (EnemyPreviousPosList.size() < Counter){
+                for (short i; i <= Counter; i++)
+                    EnemyPreviousPosList.push_back(EmptyVec);
             }
         }
-
-        // 线性插值函数
-        static float Lerp(float a, float b, float t) {
-            return a + t * (b - a);
-        }
-
-        // 更新物体的位置的函数，可以根据具体情况自定义
-        static void UpdateObjectPosition(float x, float y, const char* FilePath, int iOffset) {
-            // 更新物体的位置
-            // 例如：object.SetPosition(x, y);
-            GraphicsSystem::DrawImage(x, y, FilePath, iOffset);
-        }
-
-        // 动画完成后的处理，可以根据具体情况自定义
-        void HandleAnimationComplete() {
-            // 动画完成后的操作
-            // 例如：object.OnAnimationComplete();
-        }
     };
+
     class SwitcherAnimation {
     public:
         SwitcherAnimation(const std::vector<std::string>& imagePaths, float in_x = 0, float in_y = 0, int in_iOffset = 0) : images(imagePaths), currentIndex(0), isRunning(false) {
@@ -138,5 +128,7 @@ public:
     };
 
 };
+
+Animation AnimationObj;
 
 #endif //SUIGUIAPP_ANIMATION_HPP

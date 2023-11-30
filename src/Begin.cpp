@@ -17,6 +17,10 @@ struct Debug_{
 
 float fCatWidth = 15;
 
+std::vector<ImVec2> BulletEntityList;
+int BulletCounter = 0;
+int EntityIndex = 0;
+
 
 float iCatPosY = 560 - fCatWidth;
 float iCatPosX = ((ScreenHeight / 2) - fCatWidth);
@@ -168,7 +172,18 @@ void DrawCat(float *x, float *y, Pos4 MovingBox){
 }
 
 void DrawEnemy(float x, float y) {
-    Animation::NoAnimation::Update(&x, &y, Res.Enemy, 1);
+    ImVec2 Pos, Vel;
+    Pos.x = x;
+    Pos.y = y;
+
+    Vel.x = 0.0f;
+    Vel.y = 5.6f;
+
+    int index = 0;
+
+    Animation::MovingAnimation MA = Animation::MovingAnimation();
+    MA.Update(Pos, Vel, index, Res.Enemy, 1);
+//    Animation::MovingAnimation::Update(Pos, Vel, Res.Enemy, 1);
 }
 
 //void DrawBlock(int x, int y){
@@ -236,7 +251,22 @@ void DrawEnemyAreaSquare(){
 }
 
 void Fire(const float *x, const float *y){
+    BulletCounter++;
+    ImVec2 EmptyVec;
+    for (size_t i; i < BulletCounter; i++){
+        BulletEntityList.push_back(EmptyVec);
+        ImVec2 Pos, Vel;
+        Pos.x = *x;
+        Pos.y = *y;
 
+        Vel.x = 0.0f;
+        Vel.y = -5.6f;
+
+        int index = EntityIndex + BulletCounter + 2;
+
+        Animation::MovingAnimation MA = Animation::MovingAnimation();
+        MA.Update(Pos, Vel,index,  Res.Bullet, 0);
+    }
 }
 
 void DrawBackground(){
@@ -255,9 +285,9 @@ void MouseProc(){
             ImGui::SameLine();
             ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
         }
-        if (i == ImGuiMouseButton_Left){
-            Fire(&iCatPosX, &iCatPosY);
-        }
+//        if (i == ImGuiMouseButton_Left){
+//            Fire(&iCatPosX, &iCatPosY);
+//        }
     }
 }
 
