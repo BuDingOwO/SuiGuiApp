@@ -1,201 +1,288 @@
 #include "imgui.h"
 #include <iostream>
 #include <GL/gl.h>
-#include "png.h"
-#include "imgui_internal.h"
-
-#define IMGUI_DEFINE_MATH_OPERATORS
-
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+//#include "stb_image.h"
 #include "GLFW/glfw3.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_internal.h"
+#include <string>
+#include "Config.h"
+#include "Animation.hpp"
 
-float iCatPosY = (float)720/2;
-float iCatPosX = (float)1280/2;
+
+struct Debug_{
+    bool bDebug = false;
+}Debug;
+
+float fCatWidth = 15;
+
+
+float iCatPosY = 560 - fCatWidth;
+float iCatPosX = ((ScreenHeight / 2) - fCatWidth);
+
+struct ResStruct{
+    const char* Background1 = "../res/background/1.png";
+    const char* Background2 = "../res/background/2.png";
+    const char* Background3 = "../res/background/3.png";
+
+
+    const char* Cat1 = "../res/cat/1.png";
+    const char* Cat2 = "../res/cat/2.png";
+    const char* Cat3 = "../res/cat/3.png";
+    const char* Cat4 = "../res/cat/4.png";
+
+    const char* Enemy = "../res/assets/assets/graphics/1x/sprite-50-0.png";
+    const char* Block = "../res/assets/assets/graphics/1x/sprite-687-0.png";
+    const char* Bullet = "../res/assets/assets/graphics/1x/sprite-513-0.png";
+}Res;
+
+struct Pos4{
+    ImVec2 x;
+    ImVec2 y;
+    ImVec2 z;
+    ImVec2 w;
+};
+struct iPosVec4{
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+};
+struct iPosVec2{
+    int x;
+    int y;
+};
+
+
 //bool bCatFloating = TRUE;
-float fCatDropSpeed = 0.5f;
 float fDefaultCatDropSpeed = 0.5f;
-bool bCatOnBlock = TRUE;
+bool bCatOnBlock = FALSE;
 bool bCatCanGoLeft = TRUE;
 bool bCatCanGoRight = TRUE;
-bool bCatCanGoDown = FALSE;
+bool bCatCanGoTop = TRUE;
+bool bCatCanGoDown = TRUE;
 
-// 点与直线的碰撞检测函数
-bool pointLineCollision(float px, float py, float x1, float y1, float x2, float y2) {
-    // 计算直线上的投影点
-    float qx = x1 + ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) /
-                    ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) * (x2 - x1);
+float Velocity = 3; // 3px/s
+float Gravity = 1; // 1px/s
 
-    float qy = y1 + ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) /
-                    ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) * (y2 - y1);
+int iTimes = 5;
 
-    // 检测点是否在直线上（投影点在直线上，且投影点在直线段的范围内）
-    if ((qx >= x1 && qx <= x2) || (qx >= x2 && qx <= x1)) {
-        if ((qy >= y1 && qy <= y2) || (qy >= y2 && qy <= y1)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void Jump(){
-    if (bCatOnBlock){
-        iCatPosY -= 50;
-    }
-}
-
-void GoLeft(float* x){
-    if (bCatCanGoLeft){
-        *x -= 5;
-    }
-}
-
-
-void GoRight(float* x){
-    if (bCatCanGoRight){
-        *x += 5;
-    }
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        switch (key) {
-            case GLFW_KEY_A:
-                GoLeft(&iCatPosX);
-                break;
-            case GLFW_KEY_S:
-                iCatPosY+=5;
-                break;
-            case GLFW_KEY_D:
-                GoRight(&iCatPosX);
-                break;
-            default:
-                break;
-        }
-    }
-    if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_SPACE){
-            Jump();
-        }
-    }
-    if (action == GLFW_REPEAT) {
-        if (key == GLFW_KEY_SPACE){
-            if(iCatPosY==700.5){
-                Jump();
-                fCatDropSpeed = 0.1f;
-            }else{
-                fCatDropSpeed = 0.5f;
+bool bPointLineCollision(float px, float py, float x1, float y1, float x2, float y2){
+    if (x2 >= x1){
+        if (px <= x2 && px >= x1){
+            if (y1 == y2){
+                if (py == y1) return TRUE;
             }
         }
     }
+    return FALSE;
 }
 
-// Simple helper function to load an image into a OpenGL texture with common settings
-bool LoadTextureFromFile(const char* filename, GLuint *out_texture, int *out_width, int *out_height)
-{
-    // Load from file
-    int image_width = 0;
-    int image_height = 0;
-    unsigned char* image_data = stbi_load(filename, &image_width, &image_height, nullptr, 4);
-    if (image_data == nullptr)
-        return false;
-
-    // Create a OpenGL texture identifier
-    GLuint image_texture;
-    glGenTextures(1, &image_texture);
-    glBindTexture(GL_TEXTURE_2D, image_texture);
-
-    // Setup filtering parameters for display
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // This is required on WebGL for non power-of-two textures
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Same
-
-    // Upload pixels into texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-    stbi_image_free(image_data);
-
-    *out_texture = image_texture;
-    *out_width = image_width;
-    *out_height = image_height;
-
-    return true;
-}
-
-void DrawBackground() {
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImGuiWindow*  window = ImGui::GetCurrentWindow();
-    GLuint Image;
-    int weidth = 0;
-    int height = 0;
-
-    style.WindowPadding = ImVec2(0.f, 0.f);
-    style.ItemSpacing = ImVec2(0.f, 0.f);
-
-    LoadTextureFromFile("../res/assets/assets/graphics/1x/background-299-0.png", &Image, &weidth, &height);
-
-    for (short y = 0; y < 720; y += 160){
-        for (short x = 0; x < 1280; x += 96){
-
-//            ImGui::Image((void*)(intptr_t)Image, ImVec2((float)weidth, (float)height), ImVec2(x, y));ImGui::SameLine();
-            window -> DrawList ->AddImage((void*)(intptr_t)Image, ImVec2(x, y), ImVec2((float)x + (float)weidth, (float)y + (float)height));
+bool bLineLineCollision(float px1, float py1, float px2, float py2, float x1, float y1, float x2, float y2){
+    if (x2 >= x1){
+        if (px1 <= x2 && px1 >= x1){
+            if (y1 == y2){
+                if (py1 == y1) return TRUE;
+            }
         }
-        ImGui::Text("");
+        if (px2 <= x2 && px2 >= x1){
+            if (y1 == y2){
+                if (py2 == y1) return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+void WALK(float* x, bool mode){
+    if (mode){
+        // 向右
+        if (bCatCanGoRight){
+            *x += Velocity;
+        }
+    }else{
+        // 向左
+        if (bCatCanGoLeft){
+            *x -= Velocity;
+        }
+    }
+}
+void FLY(float* y, bool mode){
+    if (mode){
+        //向下
+        if (bCatCanGoDown) *y += Velocity;
+    }else{
+        // 向上
+        if (bCatCanGoTop) *y -= Velocity;
     }
 }
 
-void DrawCatBird(){
+/*
+void KeyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods) {
+//    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+//        if (key == GLFW_KEY_A) WALK(&iCatPosX, FALSE);
+//        if (key == GLFW_KEY_D) WALK(&iCatPosX, TRUE);
+//    }
+//    if (action == GLFW_PRESS) {
+//        if (key == GLFW_KEY_SPACE) Jump();
+//    }
+//    if (action == GLFW_REPEAT) {
+//        if (key == GLFW_KEY_SPACE){
+//            if(bCatOnBlock){
+//                Jump();
+//                Gravity = 0.1f;
+//            }else{
+//                Gravity = 0.5f;
+//            }
+//        }
+//    }
+}
+*/
+
+void DrawCat(float *x, float *y, Pos4 MovingBox){
     ImGuiStyle& style = ImGui::GetStyle();
     ImGuiWindow*  window = ImGui::GetCurrentWindow();
-    GLuint Image;
-    int width = 0;
-    int height = 0;
+
     style.WindowPadding = ImVec2(0.f, 0.f);
     style.ItemSpacing = ImVec2(0.f, 0.f);
-    LoadTextureFromFile("../res/assets/assets/graphics/1x/sprite-4-3.png", &Image, &width, &height);
+    if (*x < MovingBox.x.x) bCatCanGoLeft = FALSE;
+    else bCatCanGoLeft = TRUE; // |<
+
+    if (*y <= MovingBox.x.y) bCatCanGoTop = FALSE;
+    else bCatCanGoTop = TRUE; // -^-
+
+    if (*x >= MovingBox.y.x - (fCatWidth * iScale)) bCatCanGoRight = FALSE;
+    else bCatCanGoRight = TRUE; // >|
+
+    if (*y >= MovingBox.z.y - (fCatWidth * iScale)) {bCatCanGoDown = FALSE;bCatOnBlock = TRUE;}
+    else {bCatCanGoDown = TRUE;bCatOnBlock = FALSE;} // -v-
 
 
-    ImVec2 image_min(iCatPosX, iCatPosY);
-    ImVec2 image_max(((float)width / 3 + iCatPosX), ((float)height / 2 + iCatPosY));
-    ImVec2 uv_min(0.0f, 0.0f);
-    ImVec2 uv_max(0.33f, 0.5f);
-    if (iCatPosX < 0) bCatCanGoLeft = FALSE;
-    if (iCatPosY < 0) iCatPosY = 0;
-    if (iCatPosX >= 1280) iCatPosX = 1280;
-    if (iCatPosY >= 720){
-        iCatPosY = 720;
-        bCatOnBlock = TRUE;
-    }else bCatOnBlock = FALSE;
     if (!bCatOnBlock) {
-        fCatDropSpeed = fDefaultCatDropSpeed;
-        iCatPosY += fCatDropSpeed;
-    }else fCatDropSpeed = 0;
-    window -> DrawList ->AddImage((void*)(intptr_t)Image, image_min, image_max, uv_min, uv_max);
+        Gravity = fDefaultCatDropSpeed;
+        *y += Gravity;
+    }else Gravity = 0;
+
+    Animation::NoAnimation::Update(x, y, Res.Cat1, 0);
 }
 
-void DrawBlock(int x, int y){
+void DrawEnemy(float x, float y) {
+    Animation::NoAnimation::Update(&x, &y, Res.Enemy, 1);
+}
+
+//void DrawBlock(int x, int y){
+//    ImGuiWindow*  window = ImGui::GetCurrentWindow();
+//    GLuint Image;
+//    int weidth = 0;
+//    int height = 0;
+//
+////    LoadTextureFromFile(Res.Block, &Image, &weidth, &height);
+//
+//    int BlockHead = x;
+//    int BlockTail = x + weidth;
+//    int BlockTopLine = y - height;
+////    ImGui::Text("Block Y: %d, X: %d, FX: %d", y-height, x, x+weidth);
+////    if(ImGui::Button("Goto Y 350")) iCatPosY = 350;
+//
+//    if (bLineLineCollision(iCatPosX, iCatPosY, iCatPosX + (fCatWidth * iScale), iCatPosY + (fCatWidth * iScale), (float)BlockHead, (float)BlockTopLine, (float)BlockTail, (float)BlockTopLine)){
+//        bCatOnBlock = TRUE;
+//        ImGui::Text("Collision");
+//    }else bCatOnBlock = FALSE;
+//
+//    window -> DrawList ->AddImage((void*)(intptr_t)Image, ImVec2((float)x, (float)y), ImVec2((float)x + (float)weidth * iScale, (float)y + (float)height * iScale));
+//}
+
+void DrawMovingAreaSquare(){
     ImGuiWindow*  window = ImGui::GetCurrentWindow();
-    GLuint Image;
-    int weidth = 0;
-    int height = 0;
+    int iAreaWidth = 1216;
+    int iAreaHeight = 156;
 
-    LoadTextureFromFile("../res/assets/assets/graphics/1x/sprite-687-0.png", &Image, &weidth, &height);
+    ImVec2 LeftTop = ImVec2(32, ScreenHeight - 32 - iAreaHeight);
+    ImVec2 RightTop = ImVec2(32 + iAreaWidth, ScreenHeight - 32 - iAreaHeight);
+    ImVec2 LeftBottom = ImVec2(32, ScreenHeight - 32);
+    ImVec2 RightBottom = ImVec2(32 + iAreaWidth, ScreenHeight - 32);
 
-    int BlockHead = x;
-    int BlockTail = x + height;
-    ImGui::Text("Block Y: %d, X: %d, FX: %d", y-height, x, x+weidth);
-    if(ImGui::Button("Goto Y 350")) iCatPosY = 350;
+//    iPosVec4 iLeftWALLPos = iPosVec4(LeftTop.x, LeftTop.y, LeftBottom.x, LeftBottom.y);
+//    iPosVec4 iRightWALLPos = iPosVec4(RightTop.x, RightTop.y, RightBottom.x, RightBottom.y);
+//    iPosVec4 iTopWALLPos = iPosVec4(LeftTop.x, LeftTop.y, RightTop.x, RightTop.y);
+//    iPosVec4 iBottomWALLPos = iPosVec4(LeftBottom.x, LeftBottom.y, RightBottom.x, RightBottom.y);
+    if (Debug.bDebug) {
+        window->DrawList->AddQuad(LeftTop, RightTop, RightBottom, LeftBottom, IM_COL32(250, 250, 250, 250));
+    }
+    DrawCat(&iCatPosX, &iCatPosY, Pos4(LeftTop, RightTop, LeftBottom, RightBottom));
+}
 
-    if (pointLineCollision(iCatPosX, iCatPosY, (float)x, (float)y - (float)height, (float)x + (float)weidth, (float)y - (float)height)){
-        bCatOnBlock = TRUE;
-    }else bCatOnBlock = FALSE;
+void DrawEnemyAreaSquare(){
+    ImGuiWindow*  window = ImGui::GetCurrentWindow();
+    int iAreaWidth = 1216;
+    int iAreaHeight = 468;
 
-    window -> DrawList ->AddImage((void*)(intptr_t)Image, ImVec2((float)x, (float)y), ImVec2((float)x + (float)weidth, (float)y + (float)height));
+    ImVec2 LeftTop = ImVec2(32,  32);
+    ImVec2 RightTop = ImVec2(32 + iAreaWidth, 32);
+    ImVec2 LeftBottom = ImVec2(32, iAreaHeight + 32);
+    ImVec2 RightBottom = ImVec2(32 + iAreaWidth, iAreaHeight + 32);
+
+//    iPosVec4 iLeftWALLPos = iPosVec4(LeftTop.x, LeftTop.y, LeftBottom.x, LeftBottom.y);
+//    iPosVec4 iRightWALLPos = iPosVec4(RightTop.x, RightTop.y, RightBottom.x, RightBottom.y);
+//    iPosVec4 iTopWALLPos = iPosVec4(LeftTop.x, LeftTop.y, RightTop.x, RightTop.y);
+//    iPosVec4 iBottomWALLPos = iPosVec4(LeftBottom.x, LeftBottom.y, RightBottom.x, RightBottom.y);
+
+    if (Debug.bDebug) {
+        window -> DrawList ->AddQuad(LeftTop, RightTop, RightBottom, LeftBottom, IM_COL32(250, 250, 250, 250));
+    }
+
+    DrawEnemy(LeftTop.x + (RightTop.x / 2), LeftTop.y + (RightTop.y / 2));
+}
+
+void Fire(const float *x, const float *y){
+
+}
+
+void DrawBackground(){
+    std::vector<std::string> l;
+    l.emplace_back(Res.Background1);
+    l.emplace_back(Res.Background2);
+    l.emplace_back(Res.Background3);
+    Animation::BackGroundAnimation::Update(l);
+};
+
+void MouseProc(){
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::Text("Mouse down:");
+    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++){
+        if (ImGui::IsMouseDown(i)) {
+            ImGui::SameLine();
+            ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
+        }
+        if (i == ImGuiMouseButton_Left){
+            Fire(&iCatPosX, &iCatPosY);
+        }
+    }
+}
+
+void KeyProc(){
+    struct funcs {
+        static bool IsLegacyNativeDupe(ImGuiKey key) { return key < 512 && ImGui::GetIO().KeyMap[key] != -1; }
+    }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+    auto start_key = (ImGuiKey)0;
+    ImGui::Text("Keys down:");
+    for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey) (key + 1)) {
+        if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key))continue;
+        ImGui::SameLine();
+        ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key);
+        if(ImGui::IsKeyDown(ImGuiKey_W)) FLY(&iCatPosY, FALSE);
+        if(ImGui::IsKeyDown(ImGuiKey_S)) FLY(&iCatPosY, TRUE);
+        if(ImGui::IsKeyDown(ImGuiKey_A)) WALK(&iCatPosX, FALSE);
+        if(ImGui::IsKeyDown(ImGuiKey_D)) WALK(&iCatPosX, TRUE);
+        if(ImGui::IsKeyDown(ImGuiKey_J)) Fire(&iCatPosX, &iCatPosY);
+    }
 }
 
 void BeginFrame()
 {
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowBorderSize = 0;
     ImGuiWindowFlags flags = 0;
     flags |= ImGuiWindowFlags_NoTitleBar;
     flags |= ImGuiWindowFlags_NoMove;
@@ -203,6 +290,7 @@ void BeginFrame()
     flags |= ImGuiWindowFlags_NoScrollbar;
     flags |= ImGuiWindowFlags_NoBackground;
     flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowSize(viewport->Size);
@@ -224,19 +312,20 @@ void BeginFrame()
 
     ImGui::Text("CatX: %.6f", iCatPosX);
     ImGui::Text("CatY: %.6f", iCatPosY);
-    ImGui::Text("bCatOnBlock: %s", bCatOnBlock ? "TRUE" : "FALSE");
+//    ImGui::Text("bCatOnBlock: %s", bCatOnBlock ? "TRUE" : "FALSE");
     ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
+    ImGui::Checkbox("Debug", &Debug.bDebug);
 
-    DrawBlock(1280/2, 720/2+50);
+//    if(ImGui::Button("Goto Y 200")) iCatPosY = 200;
+//    DrawBlock(560, 460);
+    MouseProc();
+    KeyProc();
 
-    DrawCatBird();
 
-
-
-//    ImGui::Image((void*)(intptr_t)Image, ImVec2((float)weidth, (float)height), ImVec2(x, y));
-
+    DrawMovingAreaSquare();
+    DrawEnemyAreaSquare();
 
     ImGui::End();
 
-//    ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
 }

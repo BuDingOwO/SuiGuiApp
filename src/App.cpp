@@ -2,7 +2,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
-#include <stdio.h>
+#include <cstdio>
 #include <math.h>  
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -11,6 +11,8 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include "Begin.h"
+#include "stb_image.h"
+#include "Config.h"
 
 #define PI 3.141592
 
@@ -42,11 +44,27 @@ int main( int argc, char** argv )
     // 隐藏标题栏和边框
 //    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
-    GLFWwindow * window = glfwCreateWindow(1280+20, 720+20, "SuiApp", NULL, NULL);
+    GLFWwindow * window = glfwCreateWindow(ScreenWidth, ScreenHeight, "SuiApp", NULL, NULL);
+
     if ( window == NULL )
+        // 创建窗口失败
         return 1;
 
-    glfwSetKeyCallback(window, key_callback);
+    // 获取屏幕分辨率
+    int cx, cy;
+
+    int monitorCount;
+    GLFWmonitor** pMonitor = glfwGetMonitors(&monitorCount);
+    for (int i = 0; i < monitorCount; i++){
+        const GLFWvidmode * mode = glfwGetVideoMode(pMonitor[i]);
+        cx = mode -> width;
+        cy = mode -> height;
+    }
+    // 设置窗口居中
+    glfwSetWindowPos(window, cx / 2 - ScreenWidth / 2, cy /2 - ScreenHeight / 2);
+
+
+//    glfwSetKeyCallback(window, KeyCallBack);
     glfwMakeContextCurrent( window );
     glfwSwapInterval(1); // Enable vsync
 

@@ -384,6 +384,7 @@ void ImGui_ImplGlfw_CursorPosCallback(GLFWwindow* window, double x, double y)
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (bd->PrevUserCallbackCursorPos != nullptr && ImGui_ImplGlfw_ShouldChainCallback(window))
         bd->PrevUserCallbackCursorPos(window, x, y);
+
     if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
 
