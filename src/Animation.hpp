@@ -9,6 +9,8 @@
 
 std::vector<ImVec2> EnemyPreviousPosList;
 
+int CatPicIndex = 0;
+
 class Animation {
 private:
 
@@ -21,8 +23,11 @@ public:
     };
     class CatAnimation {
     public:
-        static void Update(float* x, float* y, const char* imagePath, int iOffset = 0) {
-            GraphicsSystem::DrawImage(*x, *y, imagePath, iOffset);
+        float dt = 1.f / 60.f;
+        void Update(const float* x, const float* y, std::vector<std::string> image_list, int iOffset = 0) {
+            GraphicsSystem::DrawImage(*x, *y, image_list.at(CatPicIndex).c_str(), iOffset);
+            CatPicIndex += 1;
+            if (CatPicIndex == image_list.size()) CatPicIndex = 0;
         }
     };
     class BackGroundAnimation {

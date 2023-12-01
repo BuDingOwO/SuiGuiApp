@@ -75,6 +75,9 @@ int main( int argc, char** argv )
     ImGui_ImplGlfw_InitForOpenGL( window, true );
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    FrameInit();
+    // Init
+
     while ( !glfwWindowShouldClose( window ) )
     {
 
@@ -88,8 +91,7 @@ int main( int argc, char** argv )
 
         ImGui::NewFrame();
 
-        BeginFrame();
-
+        FrameRender();
 
         // Rendering
         ImGui::Render();

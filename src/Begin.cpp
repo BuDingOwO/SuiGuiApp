@@ -10,6 +10,13 @@
 #include "Config.h"
 #include "Animation.hpp"
 
+Animation::MovingAnimation MovingAnim = Animation::MovingAnimation();
+Animation::NoAnimation NoAnim = Animation::NoAnimation();
+Animation::BackGroundAnimation BackGroundAnim = Animation::BackGroundAnimation();
+Animation::CatAnimation CatAnim = Animation::CatAnimation();
+
+
+
 
 struct Debug_{
     bool bDebug = false;
@@ -22,24 +29,27 @@ int BulletCounter = 0;
 int EntityIndex = 0;
 
 
-float iCatPosY = 560 - fCatWidth;
-float iCatPosX = ((ScreenHeight / 2) - fCatWidth);
+float fCatPosY = 560 - fCatWidth;
+float fCatPosX = ((ScreenHeight / 2) - fCatWidth);
 
 struct ResStruct{
     const char* Background1 = "../res/background/1.png";
     const char* Background2 = "../res/background/2.png";
     const char* Background3 = "../res/background/3.png";
 
-
-    const char* Cat1 = "../res/cat/1.png";
-    const char* Cat2 = "../res/cat/2.png";
-    const char* Cat3 = "../res/cat/3.png";
-    const char* Cat4 = "../res/cat/4.png";
-
     const char* Enemy = "../res/assets/assets/graphics/1x/sprite-50-0.png";
     const char* Block = "../res/assets/assets/graphics/1x/sprite-687-0.png";
     const char* Bullet = "../res/assets/assets/graphics/1x/sprite-513-0.png";
 }Res;
+
+struct CatResStruct {
+    const char *Cat1 = "../res/cat/1.png";
+    const char *Cat2 = "../res/cat/2.png";
+    const char *Cat3 = "../res/cat/3.png";
+    const char *Cat4 = "../res/cat/4.png";
+};
+
+std::vector<std::string> CatRes;
 
 struct Pos4{
     ImVec2 x;
@@ -125,8 +135,8 @@ void FLY(float* y, bool mode){
 /*
 void KeyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods) {
 //    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-//        if (key == GLFW_KEY_A) WALK(&iCatPosX, FALSE);
-//        if (key == GLFW_KEY_D) WALK(&iCatPosX, TRUE);
+//        if (key == GLFW_KEY_A) WALK(&fCatPosX, FALSE);
+//        if (key == GLFW_KEY_D) WALK(&fCatPosX, TRUE);
 //    }
 //    if (action == GLFW_PRESS) {
 //        if (key == GLFW_KEY_SPACE) Jump();
@@ -143,6 +153,13 @@ void KeyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods
 //    }
 }
 */
+
+void FrameInit(){
+    CatRes.emplace_back("../res/cat/1.png");
+    CatRes.emplace_back("../res/cat/2.png");
+    CatRes.emplace_back("../res/cat/3.png");
+    CatRes.emplace_back("../res/cat/4.png");
+}
 
 void DrawCat(float *x, float *y, Pos4 MovingBox){
     ImGuiStyle& style = ImGui::GetStyle();
@@ -168,7 +185,7 @@ void DrawCat(float *x, float *y, Pos4 MovingBox){
         *y += Gravity;
     }else Gravity = 0;
 
-    Animation::NoAnimation::Update(x, y, Res.Cat1, 0);
+    CatAnim.Update(x, y, CatRes, 0);
 }
 
 void DrawEnemy(float x, float y) {
@@ -198,9 +215,9 @@ void DrawEnemy(float x, float y) {
 //    int BlockTail = x + weidth;
 //    int BlockTopLine = y - height;
 ////    ImGui::Text("Block Y: %d, X: %d, FX: %d", y-height, x, x+weidth);
-////    if(ImGui::Button("Goto Y 350")) iCatPosY = 350;
+////    if(ImGui::Button("Goto Y 350")) fCatPosY = 350;
 //
-//    if (bLineLineCollision(iCatPosX, iCatPosY, iCatPosX + (fCatWidth * iScale), iCatPosY + (fCatWidth * iScale), (float)BlockHead, (float)BlockTopLine, (float)BlockTail, (float)BlockTopLine)){
+//    if (bLineLineCollision(fCatPosX, fCatPosY, fCatPosX + (fCatWidth * iScale), fCatPosY + (fCatWidth * iScale), (float)BlockHead, (float)BlockTopLine, (float)BlockTail, (float)BlockTopLine)){
 //        bCatOnBlock = TRUE;
 //        ImGui::Text("Collision");
 //    }else bCatOnBlock = FALSE;
@@ -225,7 +242,7 @@ void DrawMovingAreaSquare(){
     if (Debug.bDebug) {
         window->DrawList->AddQuad(LeftTop, RightTop, RightBottom, LeftBottom, IM_COL32(250, 250, 250, 250));
     }
-    DrawCat(&iCatPosX, &iCatPosY, Pos4(LeftTop, RightTop, LeftBottom, RightBottom));
+    DrawCat(&fCatPosX, &fCatPosY, Pos4(LeftTop, RightTop, LeftBottom, RightBottom));
 }
 
 void DrawEnemyAreaSquare(){
@@ -253,19 +270,18 @@ void DrawEnemyAreaSquare(){
 void Fire(const float *x, const float *y){
     BulletCounter++;
     ImVec2 EmptyVec;
-    for (size_t i; i < BulletCounter; i++){
+    for (short i; i < BulletCounter; i++){
         BulletEntityList.push_back(EmptyVec);
         ImVec2 Pos, Vel;
         Pos.x = *x;
         Pos.y = *y;
 
         Vel.x = 0.0f;
-        Vel.y = -5.6f;
+        Vel.y = -15.6f;
 
         int index = EntityIndex + BulletCounter + 2;
 
-        Animation::MovingAnimation MA = Animation::MovingAnimation();
-        MA.Update(Pos, Vel,index,  Res.Bullet, 0);
+        MovingAnim.Update(Pos, Vel,index,  Res.Bullet, 0);
     }
 }
 
@@ -286,7 +302,7 @@ void MouseProc(){
             ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
         }
 //        if (i == ImGuiMouseButton_Left){
-//            Fire(&iCatPosX, &iCatPosY);
+//            Fire(&fCatPosX, &fCatPosY);
 //        }
     }
 }
@@ -301,15 +317,15 @@ void KeyProc(){
         if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key))continue;
         ImGui::SameLine();
         ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key);
-        if(ImGui::IsKeyDown(ImGuiKey_W)) FLY(&iCatPosY, FALSE);
-        if(ImGui::IsKeyDown(ImGuiKey_S)) FLY(&iCatPosY, TRUE);
-        if(ImGui::IsKeyDown(ImGuiKey_A)) WALK(&iCatPosX, FALSE);
-        if(ImGui::IsKeyDown(ImGuiKey_D)) WALK(&iCatPosX, TRUE);
-        if(ImGui::IsKeyDown(ImGuiKey_J)) Fire(&iCatPosX, &iCatPosY);
+        if(ImGui::IsKeyDown(ImGuiKey_W)) FLY(&fCatPosY, FALSE);
+        if(ImGui::IsKeyDown(ImGuiKey_S)) FLY(&fCatPosY, TRUE);
+        if(ImGui::IsKeyDown(ImGuiKey_A)) WALK(&fCatPosX, FALSE);
+        if(ImGui::IsKeyDown(ImGuiKey_D)) WALK(&fCatPosX, TRUE);
+        if(ImGui::IsKeyDown(ImGuiKey_J)) Fire(&fCatPosX, &fCatPosY);
     }
 }
 
-void BeginFrame()
+void FrameRender()
 {
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowBorderSize = 0;
@@ -340,13 +356,13 @@ void BeginFrame()
     // WindowWidth = 1280
     // WindowHeight = 720
 
-    ImGui::Text("CatX: %.6f", iCatPosX);
-    ImGui::Text("CatY: %.6f", iCatPosY);
+    ImGui::Text("CatX: %.6f", fCatPosX);
+    ImGui::Text("CatY: %.6f", fCatPosY);
 //    ImGui::Text("bCatOnBlock: %s", bCatOnBlock ? "TRUE" : "FALSE");
     ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
     ImGui::Checkbox("Debug", &Debug.bDebug);
 
-//    if(ImGui::Button("Goto Y 200")) iCatPosY = 200;
+//    if(ImGui::Button("Goto Y 200")) fCatPosY = 200;
 //    DrawBlock(560, 460);
     MouseProc();
     KeyProc();
