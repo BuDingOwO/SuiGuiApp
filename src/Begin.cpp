@@ -15,9 +15,6 @@ Animation::NoAnimation NoAnim = Animation::NoAnimation();
 Animation::BackGroundAnimation BackGroundAnim = Animation::BackGroundAnimation();
 Animation::CatAnimation CatAnim = Animation::CatAnimation();
 
-
-
-
 struct Debug_{
     bool bDebug = false;
 }Debug;
@@ -25,6 +22,7 @@ struct Debug_{
 float fCatWidth = 15;
 
 std::vector<ImVec2> BulletEntityList;
+std::vector<ImVec4> EnemyEntityList;
 int BulletCounter = 0;
 int EntityIndex = 0;
 
@@ -37,21 +35,15 @@ struct ResStruct{
     const char* Background2 = "../res/background/2.png";
     const char* Background3 = "../res/background/3.png";
 
-    const char* Enemy = "../res/assets/assets/graphics/1x/sprite-50-0.png";
-    const char* Block = "../res/assets/assets/graphics/1x/sprite-687-0.png";
-    const char* Bullet = "../res/assets/assets/graphics/1x/sprite-513-0.png";
+    const char* Enemy = "../res/enemy/1.png";
+
+    const char* Bullet = "../res/bullet.png";
 }Res;
 
-struct CatResStruct {
-    const char *Cat1 = "../res/cat/1.png";
-    const char *Cat2 = "../res/cat/2.png";
-    const char *Cat3 = "../res/cat/3.png";
-    const char *Cat4 = "../res/cat/4.png";
-};
 
 std::vector<std::string> CatRes;
 
-struct Pos4{
+struct iVec4{
     ImVec2 x;
     ImVec2 y;
     ImVec2 z;
@@ -159,9 +151,17 @@ void FrameInit(){
     CatRes.emplace_back("../res/cat/2.png");
     CatRes.emplace_back("../res/cat/3.png");
     CatRes.emplace_back("../res/cat/4.png");
+
+    // Add Enemy
+    ImVec4 FirstEnemy;
+    FirstEnemy.x = 100;
+    FirstEnemy.y = 20;
+    FirstEnemy.z = 4.5;
+    FirstEnemy.w = 3.5;
+    EnemyEntityList.push_back(FirstEnemy);
 }
 
-void DrawCat(float *x, float *y, Pos4 MovingBox){
+void DrawCat(float *x, float *y, iVec4 MovingBox){
     ImGuiStyle& style = ImGui::GetStyle();
     ImGuiWindow*  window = ImGui::GetCurrentWindow();
 
@@ -188,18 +188,26 @@ void DrawCat(float *x, float *y, Pos4 MovingBox){
     CatAnim.Update(x, y, CatRes, 0);
 }
 
-void DrawEnemy(float x, float y) {
+void DrawEnemy(float x, float y, iVec4 MovingBox) {
     ImVec2 Pos, Vel;
-    Pos.x = x;
-    Pos.y = y;
+    for (auto & i : EnemyEntityList){
+        Pos.x = i.x;
+        Pos.y = i.y;
+        Vel.x = i.z;
+        Vel.y = i.w;
+    }
 
-    Vel.x = 0.0f;
-    Vel.y = 5.6f;
+    if (x < MovingBox.x.x) Vel.x = -Vel.x; // |<
+
+    if (y <= MovingBox.x.y) Vel.y = -Vel.y; // -^-
+
+    if (x >= MovingBox.y.x - float(5 * iScale)) Vel.x = -Vel.x; // >|
+
+    if (y >= MovingBox.z.y - float(5 * iScale)) Vel.y = -Vel.y; // -v-
 
     int index = 0;
 
-    Animation::MovingAnimation MA = Animation::MovingAnimation();
-    MA.Update(Pos, Vel, index, Res.Enemy, 1);
+    MovingAnim.Update(Pos, Vel, index, Res.Enemy, 1);
 //    Animation::MovingAnimation::Update(Pos, Vel, Res.Enemy, 1);
 }
 
@@ -242,18 +250,18 @@ void DrawMovingAreaSquare(){
     if (Debug.bDebug) {
         window->DrawList->AddQuad(LeftTop, RightTop, RightBottom, LeftBottom, IM_COL32(250, 250, 250, 250));
     }
-    DrawCat(&fCatPosX, &fCatPosY, Pos4(LeftTop, RightTop, LeftBottom, RightBottom));
+    DrawCat(&fCatPosX, &fCatPosY, iVec4(LeftTop, RightTop, LeftBottom, RightBottom));
 }
 
 void DrawEnemyAreaSquare(){
     ImGuiWindow*  window = ImGui::GetCurrentWindow();
-    int iAreaWidth = 1216;
-    int iAreaHeight = 468;
+    float fAreaWidth = 1216;
+    float fAreaHeight = 468;
 
     ImVec2 LeftTop = ImVec2(32,  32);
-    ImVec2 RightTop = ImVec2(32 + iAreaWidth, 32);
-    ImVec2 LeftBottom = ImVec2(32, iAreaHeight + 32);
-    ImVec2 RightBottom = ImVec2(32 + iAreaWidth, iAreaHeight + 32);
+    ImVec2 RightTop = ImVec2(32 + fAreaWidth, 32);
+    ImVec2 LeftBottom = ImVec2(32, fAreaHeight + 32);
+    ImVec2 RightBottom = ImVec2(32 + fAreaWidth, fAreaHeight + 32);
 
 //    iPosVec4 iLeftWALLPos = iPosVec4(LeftTop.x, LeftTop.y, LeftBottom.x, LeftBottom.y);
 //    iPosVec4 iRightWALLPos = iPosVec4(RightTop.x, RightTop.y, RightBottom.x, RightBottom.y);
@@ -264,7 +272,7 @@ void DrawEnemyAreaSquare(){
         window -> DrawList ->AddQuad(LeftTop, RightTop, RightBottom, LeftBottom, IM_COL32(250, 250, 250, 250));
     }
 
-    DrawEnemy(LeftTop.x + (RightTop.x / 2), LeftTop.y + (RightTop.y / 2));
+    DrawEnemy(LeftTop.x + (RightTop.x / 2), LeftTop.y + (RightTop.y / 2), iVec4(LeftTop, RightTop, LeftBottom, RightBottom));
 }
 
 void Fire(const float *x, const float *y){

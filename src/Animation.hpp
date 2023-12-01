@@ -2,6 +2,7 @@
 #define SUIGUIAPP_ANIMATION_HPP
 
 #include "GraphicsSystem.hpp"
+#include "Config.h"
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -10,6 +11,7 @@
 std::vector<ImVec2> EnemyPreviousPosList;
 
 int CatPicIndex = 0;
+auto CatTimmer = 0;
 
 class Animation {
 private:
@@ -17,7 +19,7 @@ private:
 public:
     class NoAnimation {
     public:
-        static void Update(float* x, float* y, const char* imagePath, int iOffset = 0) {
+        static void Update(const float* x, const float* y, const char* imagePath, int iOffset = 0) {
             GraphicsSystem::DrawImage(*x, *y, imagePath, iOffset);
         }
     };
@@ -25,8 +27,12 @@ public:
     public:
         float dt = 1.f / 60.f;
         void Update(const float* x, const float* y, std::vector<std::string> image_list, int iOffset = 0) {
+            auto CatTimmerStart = std::chrono::system_clock::now();
             GraphicsSystem::DrawImage(*x, *y, image_list.at(CatPicIndex).c_str(), iOffset);
-            CatPicIndex += 1;
+            auto CatTimmerEnd = std::chrono::system_clock::now();
+            auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(CatTimmerEnd - CatTimmerStart);
+            CatTimmer = CatTimmer + Duration.count();
+            if (CatTimmer >= 2500) {CatPicIndex += 1; CatTimmer = 0;}
             if (CatPicIndex == image_list.size()) CatPicIndex = 0;
         }
     };
@@ -69,67 +75,6 @@ public:
                     EnemyPreviousPosList.push_back(EmptyVec);
             }
         }
-    };
-
-    class SwitcherAnimation {
-    public:
-        SwitcherAnimation(const std::vector<std::string>& imagePaths, float in_x = 0, float in_y = 0, int in_iOffset = 0) : images(imagePaths), currentIndex(0), isRunning(false) {
-            this->y = in_y;
-            this->iOffset = in_iOffset;
-            this->x = in_x;
-        }
-
-        ~SwitcherAnimation() {
-            Stop();
-        }
-
-        void Start() {
-            if (!isRunning) {
-                isRunning = true;
-                animationThread = std::thread(&SwitcherAnimation::Run, this);
-
-//                std::cout << "Start animation " << images[currentIndex] << " at " << x << ", " << y << "\n";
-//                animationThread = std::thread([this]() { Run(); });
-            }
-        }
-
-        void Stop() {
-            if (isRunning) {
-                isRunning = false;
-                if (animationThread.joinable()) {
-                    animationThread.join();
-                }
-            }
-        }
-
-    private:
-        std::vector<std::string> images;
-        size_t currentIndex;
-        std::thread animationThread;
-        bool isRunning;
-        float x, y;
-        int iOffset;
-
-        void Run() {
-            while (isRunning) {
-                // 渲染当前图片，这里用输出代替真实的渲染操作
-                RenderImage(images[currentIndex]);
-
-                // 切换到下一张图片
-                currentIndex = (currentIndex + 1) % images.size();
-
-                // 等待1秒
-                std::this_thread::sleep_for(std::chrono::seconds (1));
-            }
-        }
-
-        void RenderImage(const std::string& imagePath) const {
-            // 这里用输出代替真实的渲染操作
-            std::cout << "Rendering image: " << imagePath << " at " << x << ", " << y << "\n";
-            GraphicsSystem::DrawImage(x, y, imagePath.c_str(), iOffset);
-        }
-
-
     };
 
 };
